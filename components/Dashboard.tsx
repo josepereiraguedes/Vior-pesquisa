@@ -7,7 +7,7 @@ import {
   PieChart, Pie, Cell, Legend
 } from 'recharts';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Sparkles, Download, ArrowLeft, Loader2, TrendingUp, Users, DollarSign, ShoppingBag, Trash2, Database, MessageCircle, User, FileSpreadsheet, Filter, Eraser, Eye, X } from 'lucide-react';
+import { Sparkles, Download, ArrowLeft, Loader2, TrendingUp, Users, DollarSign, ShoppingBag, Trash2, Database, MessageCircle, User, FileSpreadsheet, Filter, Eraser, Eye, X, Ticket } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import confetti from 'canvas-confetti';
 
@@ -50,6 +50,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, onBack, onReset, onD
     const productMentions: Record<string, number> = {};
     let sumOnlineInterest = 0;
     let countOnlineInterest = 0;
+    let countCoupons = 0;
     const leadList: any[] = [];
 
     filteredData.forEach(survey => {
@@ -61,6 +62,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, onBack, onReset, onD
       const ageId = survey.responses.find(r => r.questionId === 'age')?.answer || '';
       const freqId = survey.responses.find(r => r.questionId === 'frequency')?.answer || '';
       const ticketId = survey.responses.find(r => r.questionId === 'ticket')?.answer || '';
+      const coupon = survey.responses.find(r => r.questionId === 'coupon')?.answer || '';
+      if (coupon) countCoupons++;
+
       const dateObj = new Date(survey.timestamp || Date.now());
 
       leadList.push({
@@ -77,7 +81,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, onBack, onReset, onD
         age: ageId,
         frequency: freqId,
         ticket: ticketId,
-        platforms: survey.responses.find(r => r.questionId === 'location')?.answer || []
+        platforms: survey.responses.find(r => r.questionId === 'location')?.answer || [],
+        coupon: coupon
       });
 
       // Aggregate each question
@@ -138,7 +143,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, onBack, onReset, onD
       analytics: {
         totalLeads: total,
         onlineInterestAvg: countOnlineInterest > 0 ? (sumOnlineInterest / countOnlineInterest).toFixed(1) : '0',
-        topCategory: Object.entries(categoryCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || '-'
+        topCategory: Object.entries(categoryCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || '-',
+        totalCoupons: countCoupons
       },
       categoryStats: Object.entries(categoryCounts).map(([id, value]) => {
         const option = SURVEY_QUESTIONS.find(q => q.id === 'category')?.options?.find(opt => opt.id === id);
@@ -347,10 +353,11 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, onBack, onReset, onD
         )}
 
         {/* Metrics Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
           <MetricCard title="Total Leads" value={analytics.totalLeads} icon={<Users size={20} />} color="pink" />
           <MetricCard title="Top Categoria" value={analytics.topCategory} icon={<ShoppingBag size={20} />} color="purple" />
           <MetricCard title="Score Digital" value={`${analytics.onlineInterestAvg}/5`} icon={<TrendingUp size={20} />} color="blue" />
+          <MetricCard title="Cupons Gerados" value={analytics.totalCoupons} icon={<Ticket size={20} />} color="green" />
           <div className="bg-gradient-to-br from-purple-600 to-pink-600 p-5 rounded-xl text-white shadow-lg overflow-hidden relative cursor-pointer active:scale-95 transition-transform" onClick={handleAiAnalysis}>
             <div className="relative z-10">
               <p className="text-xs font-bold opacity-80 uppercase tracking-wider">AI Insights</p>
@@ -632,6 +639,11 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, onBack, onReset, onD
                     <p className="text-slate-500 text-xs flex items-center mt-1">
                       <MessageCircle size={12} className="mr-1 text-green-500" /> {selectedLead.whatsapp} • {selectedLead.date} às {selectedLead.time}
                     </p>
+                    {selectedLead.coupon && (
+                      <span className="inline-flex items-center mt-2 px-2 py-1 bg-yellow-50 text-yellow-700 text-[10px] font-bold rounded-md border border-yellow-200">
+                        <Ticket size={10} className="mr-1" /> CUPOM: {selectedLead.coupon}
+                      </span>
+                    )}
                   </div>
                   <button
                     onClick={() => setSelectedLead(null)}

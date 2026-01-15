@@ -147,6 +147,12 @@ export const MOCK_RESPONSES: CompletedSurvey[] = Array.from({ length: 50 }).map(
   ]
 }));
 
+export const COUPON_WORDS = [
+  'VIORGLOW', 'PELEDEDIVA', 'BATOMPODER', 'MIMOEXPERIENCE',
+  'DOCEBELEZA', 'OLHARRELEVANTE', 'GLAMOURVIOR', 'RITUALDIVA',
+  'MAGIACOSMETICA', 'VIPBELEZA', 'CUIDADOPREMIUM', 'SHINESISTER'
+];
+
 export const SHARING_MESSAGE = `
 Olá! 🌸
 A Vior Store quer saber o que você mais ama!

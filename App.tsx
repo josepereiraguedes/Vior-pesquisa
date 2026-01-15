@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
 import { SurveyFlow } from './components/SurveyFlow';
 import { Dashboard } from './components/Dashboard';
 import { SurveyResponse, CompletedSurvey } from './types';
-import { MOCK_RESPONSES, SHARING_MESSAGE } from './constants';
+import { MOCK_RESPONSES, SHARING_MESSAGE, COUPON_WORDS } from './constants';
 import { Share2, Sparkles, Check, Loader2, Lock, MessageCircle } from 'lucide-react';
+import { CouponCard } from './components/CouponCard';
 import { supabase } from './services/supabaseClient';
 import confetti from 'canvas-confetti';
 
@@ -19,6 +21,7 @@ const App: React.FC = () => {
     return sessionStorage.getItem('vior_admin_auth') === 'true';
   });
   const [adminPinInput, setAdminPinInput] = useState('');
+  const [generatedCoupon, setGeneratedCoupon] = useState<string | null>(null);
 
   const [copied, setCopied] = useState(false);
 
@@ -101,14 +104,19 @@ const App: React.FC = () => {
         return;
       }
 
-      // 3. Insert if new
+      // 3. Generate Random Coupon
+      const randomCoupon = COUPON_WORDS[Math.floor(Math.random() * COUPON_WORDS.length)];
+      const finalResponses = [...responses, { questionId: 'coupon', answer: randomCoupon }];
+
+      // 4. Save to Supabase (Insert if new)
       const { error: insertError } = await supabase.from('surveys').insert({
-        responses: responses
+        responses: finalResponses
       });
 
       if (insertError) throw insertError;
 
-      // 4. Success!
+      // 5. Success!
+      setGeneratedCoupon(randomCoupon);
       setView('thank_you');
       confetti({
         particleCount: 150,
@@ -271,46 +279,56 @@ const App: React.FC = () => {
   if (view === 'thank_you') {
     return (
       <div className="min-h-screen bg-white flex flex-col items-center justify-center p-6 text-center">
-        <div className="max-w-md w-full animate-fade-in-up">
-          <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
-            <Sparkles className="text-green-600" size={40} />
-          </div>
-          <h2 className="text-3xl font-bold text-slate-900 mb-4">Cadastro Confirmado! 🎉</h2>
-          <p className="text-slate-600 mb-8">
-            Suas respostas foram enviadas com sucesso.
-            <br /><br />
-            <strong>Agora cruze os dedos! 🤞</strong><br />
-            O sorteio será realizado utilizando o seu <strong>número de WhatsApp</strong>. Fique de olho, se você ganhar, entraremos em contato por lá!
-          </p>
-
-          {/* WhatsApp Confirmation Visual */}
-          <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 p-6 rounded-xl mb-8 relative shadow-sm">
-            <div className="flex flex-col items-center justify-center">
-              <div className="p-3 bg-white rounded-full mb-3 shadow-sm">
-                <MessageCircle className="text-green-500" size={24} />
-              </div>
-              <span className="block text-sm text-green-800 font-bold mb-1">Entrada no Sorteio Validada</span>
-              <p className="text-xs text-green-600 mt-1">Seu WhatsApp é sua chave de participação.</p>
+        <motion.div
+          initial={{ scale: 0.8, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          className="bg-white rounded-3xl shadow-xl w-full max-w-lg p-8 sm:p-12 text-center relative overflow-hidden"
+        >
+          {generatedCoupon ? (
+            <div className="mb-8">
+              <h1 className="text-3xl font-black text-slate-800 mb-2">Parabéns! 🎉</h1>
+              <p className="text-slate-500 mb-6">Você completou a pesquisa e ganhou um cupom exclusivo!</p>
+              <CouponCard code={generatedCoupon} />
             </div>
-          </div>
+          ) : (
+            <>
+              <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                <Check className="text-green-500 w-10 h-10" />
+              </div>
+              <h1 className="text-3xl font-black text-slate-800 mb-4">Obrigado! 🌸</h1>
+              <p className="text-slate-600 mb-8">
+                Sua participação é fundamental para construirmos a Vior Store.
+                Boa sorte no sorteio do Kit!
+              </p>
+            </>
+          )}
 
-          <div className="space-y-4">
+          <div className="bg-slate-50 rounded-2xl p-6 mb-8 border border-slate-100">
+            <h3 className="font-bold text-slate-700 mb-3 flex items-center justify-center">
+              <Share2 size={16} className="mr-2 text-purple-500" />
+              Convide amigas e ganhe pontos extras!
+            </h3>
+            <div className="flex flex-col items-center justify-center">
+              <p className="text-xs text-slate-500 mb-3">Compartilhe o link abaixo:</p>
+              <code className="bg-white px-3 py-1 rounded border text-xs text-pink-500 mb-3">viorpesquisa.netlify.app</code>
+            </div>
+
             <button
               onClick={copyShareMessage}
               className="w-full py-3 bg-pink-100 text-pink-700 font-bold rounded-xl hover:bg-pink-200 transition-colors flex items-center justify-center"
             >
               {copied ? <Check size={18} className="mr-2" /> : <Share2 size={18} className="mr-2" />}
-              {copied ? 'Link Copiado!' : 'Convidar Amigas'}
-            </button>
-
-            <button
-              onClick={() => window.location.reload()}
-              className="w-full py-3 text-slate-400 hover:text-slate-600 font-medium text-sm"
-            >
-              Voltar ao Início
+              {copied ? 'Link Copiado!' : 'Copiar Convite'}
             </button>
           </div>
-        </div>
+
+          <button
+            onClick={() => window.location.reload()}
+            className="w-full py-3 text-slate-400 hover:text-slate-600 font-medium text-sm"
+          >
+            Voltar ao Início
+          </button>
+        </motion.div>
       </div>
     )
   }
