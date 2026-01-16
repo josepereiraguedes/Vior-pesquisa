@@ -11,7 +11,9 @@ import confetti from 'canvas-confetti';
 
 type View = 'welcome' | 'survey' | 'thank_you' | 'dashboard' | 'already_participated';
 
-const ADMIN_PIN = import.meta.env.VITE_ADMIN_PIN || '1234'; // PIN from env or default
+import { config } from './config';
+
+const ADMIN_PIN = config.adminPin;
 
 const App: React.FC = () => {
   const [view, setView] = useState<View>('welcome');

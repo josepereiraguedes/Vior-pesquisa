@@ -1,6 +1,9 @@
 import { createClient } from '@supabase/supabase-js';
+import { config } from '../config';
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+if (!config.supabaseUrl || !config.supabaseKey) {
+    console.error('Supabase Config Missing:', config);
+    throw new Error('Supabase URL/Key missing. Check .env variables.');
+}
 
-export const supabase = createClient(supabaseUrl, supabaseKey);
+export const supabase = createClient(config.supabaseUrl, config.supabaseKey);
