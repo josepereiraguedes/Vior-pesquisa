@@ -288,6 +288,19 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, onBack, onReset, onD
     });
 
     try {
+      // First, let's verify the record exists and get its actual structure
+      const { data: existingRecord, error: fetchError } = await supabase
+        .from('surveys')
+        .select('*')
+        .eq('id', leadId)
+        .single();
+
+      console.log('🔎 Existing record check:', { existingRecord, fetchError });
+
+      if (fetchError || !existingRecord) {
+        throw new Error('Registro não encontrado no banco de dados');
+      }
+
       const { data, error } = await supabase
         .from('surveys')
         .update({ responses: newResponses })
@@ -297,6 +310,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, onBack, onReset, onD
       console.log('💾 Supabase update result:', { data, error, leadId });
 
       if (error) throw error;
+
+      if (!data || data.length === 0) {
+        throw new Error('Nenhuma linha foi atualizada. Verifique a configuração do Supabase.');
+      }
 
       // Refresh data from database
       await onDataUpdate();
