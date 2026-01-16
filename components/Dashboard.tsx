@@ -265,6 +265,12 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, onBack, onReset, onD
   const toggleRedemption = async (leadId: string, currentResponses: any[]) => {
     const isRedeemed = currentResponses.find((r: any) => r.questionId === 'coupon_redeemed' && r.answer === 'true');
 
+    console.log('🔍 Toggle Redemption Started:', {
+      leadId,
+      currentlyRedeemed: !!isRedeemed,
+      currentResponsesCount: currentResponses.length
+    });
+
     // 1. Optimistic Update (Immediate)
     setOptimisticUpdates(prev => ({ ...prev, [leadId]: !isRedeemed }));
 
@@ -276,16 +282,26 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, onBack, onReset, onD
       newResponses = [...currentResponses, { questionId: 'coupon_redeemed', answer: 'true' }];
     }
 
+    console.log('📝 New responses prepared:', {
+      newResponsesCount: newResponses.length,
+      hasCouponRedeemed: newResponses.some((r: any) => r.questionId === 'coupon_redeemed')
+    });
+
     try {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('surveys')
         .update({ responses: newResponses })
-        .eq('id', leadId);
+        .eq('id', leadId)
+        .select();
+
+      console.log('💾 Supabase update result:', { data, error, leadId });
 
       if (error) throw error;
 
       // Refresh data from database
       await onDataUpdate();
+
+      console.log('✅ Data refreshed successfully');
 
       if (!isRedeemed) {
         confetti({
@@ -296,7 +312,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, onBack, onReset, onD
         });
       }
     } catch (err) {
-      console.error('Error updating coupon:', err);
+      console.error('❌ Error updating coupon:', err);
       alert('Erro ao atualizar cupom. Tente novamente.');
       // Revert optimistic update on error
       setOptimisticUpdates(prev => {
