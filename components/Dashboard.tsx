@@ -287,13 +287,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, onBack, onReset, onD
       // Refresh data from database
       await onDataUpdate();
 
-      // Clear optimistic update so UI shows actual database state
-      setOptimisticUpdates(prev => {
-        const newState = { ...prev };
-        delete newState[leadId];
-        return newState;
-      });
-
       if (!isRedeemed) {
         confetti({
           particleCount: 30,
