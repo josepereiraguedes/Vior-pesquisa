@@ -18,7 +18,7 @@ export const CouponCard: React.FC<CouponCardProps> = ({ code }) => {
     };
 
     const handleWhatsApp = () => {
-        const text = `Olá! Acabei de responder a pesquisa da Vior Store e ganhei um cupom exclusivo! 🌸\n\nMeu código é: *${code}*\n\nGostaria de saber como resgatar meu brinde/desconto! ✨`;
+        const text = `Olá! Acabei de responder a pesquisa da Vior Store! 🌸\n\nEstou participando do sorteio do Kit e ganhei meu cupom de 20% OFF: *${code}* para minha primeira compra! ✨`;
         window.open(`https://wa.me/5511999999999?text=${encodeURIComponent(text)}`, '_blank');
     };
 
@@ -44,7 +44,7 @@ export const CouponCard: React.FC<CouponCardProps> = ({ code }) => {
                         <Ticket className="text-pink-500 w-8 h-8" />
                     </div>
 
-                    <p className="text-slate-500 uppercase tracking-widest text-xs font-bold mb-2">Seu Cupom Exclusivo</p>
+                    <p className="text-slate-500 uppercase tracking-widest text-xs font-bold mb-2">Seu Cupom de 20% OFF</p>
                     <h2 className="text-3xl sm:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-600 mb-6 tracking-tight">
                         {code}
                     </h2>
@@ -69,7 +69,7 @@ export const CouponCard: React.FC<CouponCardProps> = ({ code }) => {
 
                     <div className="mt-6 flex items-center text-[10px] text-slate-400 font-medium bg-slate-50 px-3 py-1 rounded-full">
                         <Sparkles size={10} className="mr-1 text-yellow-500" />
-                        Tire um print e guarde com carinho!
+                        Tire um print! Válido para a primeira compra.
                     </div>
                 </div>
             </div>

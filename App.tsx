@@ -11,7 +11,7 @@ import confetti from 'canvas-confetti';
 
 type View = 'welcome' | 'survey' | 'thank_you' | 'dashboard' | 'already_participated';
 
-const ADMIN_PIN = '1234'; // Simple PIN for dashboard access
+const ADMIN_PIN = import.meta.env.VITE_ADMIN_PIN || '1234'; // PIN from env or default
 
 const App: React.FC = () => {
   const [view, setView] = useState<View>('welcome');
@@ -44,8 +44,8 @@ const App: React.FC = () => {
     }
   }, [view, isAdminAuthenticated]);
 
-  const fetchSurveyData = async () => {
-    setLoadingData(true);
+  const fetchSurveyData = async (silent = false) => {
+    if (!silent) setLoadingData(true);
     try {
       const { data, error } = await supabase
         .from('surveys')
@@ -67,7 +67,7 @@ const App: React.FC = () => {
     } catch (err) {
       console.error(err);
     } finally {
-      setLoadingData(false);
+      if (!silent) setLoadingData(false);
     }
   };
 
@@ -287,7 +287,10 @@ const App: React.FC = () => {
           {generatedCoupon ? (
             <div className="mb-8">
               <h1 className="text-3xl font-black text-slate-800 mb-2">Parabéns! 🎉</h1>
-              <p className="text-slate-500 mb-6">Você completou a pesquisa e ganhou um cupom exclusivo!</p>
+              <p className="text-slate-500 mb-6">
+                Você já está concorrendo ao Kit! 🎁<br />
+                E ganhou um presente extra: <strong>20% OFF na primeira compra!</strong>
+              </p>
               <CouponCard code={generatedCoupon} />
             </div>
           ) : (
@@ -412,6 +415,7 @@ const App: React.FC = () => {
         }}
         onReset={handleResetData}
         onDelete={handleDeleteResponse}
+        onDataUpdate={() => fetchSurveyData(true)}
       />
     );
   }

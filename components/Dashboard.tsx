@@ -7,26 +7,29 @@ import {
   PieChart, Pie, Cell, Legend
 } from 'recharts';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Sparkles, Download, ArrowLeft, Loader2, TrendingUp, Users, DollarSign, ShoppingBag, Trash2, Database, MessageCircle, User, FileSpreadsheet, Filter, Eraser, Eye, X, Ticket } from 'lucide-react';
+import { Sparkles, Download, ArrowLeft, Loader2, TrendingUp, Users, DollarSign, ShoppingBag, Trash2, Database, MessageCircle, User, FileSpreadsheet, Filter, Eraser, Eye, X, Ticket, Check } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import confetti from 'canvas-confetti';
+import { supabase } from '../services/supabaseClient';
 
 interface DashboardProps {
   data: CompletedSurvey[];
   onBack: () => void;
   onReset: () => void;
   onDelete: (id: string) => void;
+  onDataUpdate: () => Promise<void>;
 }
 
 const COLORS = ['#F472B6', '#C084FC', '#818CF8', '#FB7185', '#34D399'];
 
-export const Dashboard: React.FC<DashboardProps> = ({ data, onBack, onReset, onDelete }) => {
+export const Dashboard: React.FC<DashboardProps> = ({ data, onBack, onReset, onDelete, onDataUpdate }) => {
   const [analysis, setAnalysis] = useState<string | null>(null);
   const [loadingAi, setLoadingAi] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string>('todos');
   const [winner, setWinner] = useState<any | null>(null);
   const [isRolling, setIsRolling] = useState(false);
   const [selectedLead, setSelectedLead] = useState<any | null>(null);
+  const [optimisticUpdates, setOptimisticUpdates] = useState<Record<string, boolean>>({});
 
   // Integrated analytics and filtering logic
   const { analytics, categoryStats, ageStats, platformData, leads, styleStats, freqStats, ticketStats, testingStats, onlineStats, topBrands, topProducts } = useMemo(() => {
@@ -229,7 +232,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, onBack, onReset, onD
       Data: l.date,
       Hora: l.time,
       Nome: l.name,
-      WhatsApp: l.whatsapp
+      WhatsApp: l.whatsapp,
+      Cupom: l.coupon || '—',
+      Status: l.allResponses.find((r: any) => r.questionId === 'coupon_redeemed' && r.answer === 'true') ? 'USADO' : 'PENDENTE'
     }));
     const ws = XLSX.utils.json_to_sheet(worksheetData);
     const wb = XLSX.utils.book_new();
@@ -255,6 +260,50 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, onBack, onReset, onD
     link.setAttribute("download", "pesquisa_vior_store.csv");
     document.body.appendChild(link);
     link.click();
+  };
+
+  const toggleRedemption = async (leadId: string, currentResponses: any[]) => {
+    const isRedeemed = currentResponses.find((r: any) => r.questionId === 'coupon_redeemed' && r.answer === 'true');
+
+    // 1. Optimistic Update (Immediate)
+    setOptimisticUpdates(prev => ({ ...prev, [leadId]: !isRedeemed }));
+
+    let newResponses;
+
+    if (isRedeemed) {
+      newResponses = currentResponses.filter((r: any) => r.questionId !== 'coupon_redeemed');
+    } else {
+      newResponses = [...currentResponses, { questionId: 'coupon_redeemed', answer: 'true' }];
+    }
+
+    try {
+      const { error } = await supabase
+        .from('surveys')
+        .update({ responses: newResponses })
+        .eq('id', leadId);
+
+      if (error) throw error;
+
+      await onDataUpdate();
+
+      if (!isRedeemed) {
+        confetti({
+          particleCount: 30,
+          spread: 40,
+          origin: { y: 0.7 },
+          colors: ['#34D399', '#10B981']
+        });
+      }
+    } catch (err) {
+      console.error('Error updating coupon:', err);
+      alert('Erro ao atualizar cupom. Tente novamente.');
+      // Revert optimistic update on error
+      setOptimisticUpdates(prev => {
+        const newState = { ...prev };
+        delete newState[leadId];
+        return newState;
+      });
+    }
   };
 
 
@@ -539,6 +588,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, onBack, onReset, onD
                 <tr>
                   <th className="px-6 py-4">Cadastro</th>
                   <th className="px-6 py-4">Participante</th>
+                  <th className="px-6 py-4 text-center">Cupom</th>
                   <th className="px-6 py-4 text-center">WhatsApp</th>
                   <th className="px-6 py-4 text-right">Ações</th>
                 </tr>
@@ -562,6 +612,38 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, onBack, onReset, onD
                       </td>
                       <td className="px-6 py-4">
                         <div className="font-semibold text-slate-900">{lead.name}</div>
+                      </td>
+                      <td className="px-6 py-4 text-center">
+                        {lead.coupon ? (() => {
+                          const isRedeemedServer = lead.allResponses.find((r: any) => r.questionId === 'coupon_redeemed' && r.answer === 'true');
+                          const isRedeemed = optimisticUpdates[lead.id] !== undefined ? optimisticUpdates[lead.id] : isRedeemedServer;
+
+                          return (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                toggleRedemption(lead.id, lead.allResponses);
+                              }}
+                              className={`inline-flex items-center px-2 py-1 rounded-md text-xs font-bold border transition-all ${isRedeemed
+                                ? 'bg-green-600 text-white border-green-700 hover:bg-green-700 shadow-sm'
+                                : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50 border-dashed'
+                                }`}
+                              title={isRedeemed ? 'Clique para desmarcar' : 'Clique para marcar como usado'}
+                            >
+                              {isRedeemed ? (
+                                <>
+                                  <Check size={12} className="mr-1" /> {lead.coupon}
+                                </>
+                              ) : (
+                                <>
+                                  <Ticket size={12} className="mr-1" /> {lead.coupon}
+                                </>
+                              )}
+                            </button>
+                          )
+                        })() : (
+                          <span className="text-slate-300 text-xs">—</span>
+                        )}
                       </td>
                       <td className="px-6 py-4 text-center">
                         <a
@@ -644,6 +726,11 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, onBack, onReset, onD
                         <Ticket size={10} className="mr-1" /> CUPOM: {selectedLead.coupon}
                       </span>
                     )}
+                    {selectedLead.allResponses.find((r: any) => r.questionId === 'coupon_redeemed' && r.answer === 'true') && (
+                      <span className="inline-flex items-center mt-2 ml-2 px-2 py-1 bg-green-50 text-green-700 text-[10px] font-bold rounded-md border border-green-200">
+                        <Check size={10} className="mr-1" /> RESGATADO
+                      </span>
+                    )}
                   </div>
                   <button
                     onClick={() => setSelectedLead(null)}
@@ -688,8 +775,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, onBack, onReset, onD
                   })}
                 </div>
 
-                {/* Modal Footer */}
-                <div className="p-6 border-t border-slate-100 bg-slate-50 flex justify-end">
+                <div className="p-6 border-t border-slate-100 bg-slate-50 flex justify-end items-center">
+
                   <button
                     onClick={() => setSelectedLead(null)}
                     className="px-6 py-2 bg-slate-900 text-white font-bold rounded-xl hover:bg-slate-800 transition-colors"
@@ -702,7 +789,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, onBack, onReset, onD
           )}
         </AnimatePresence>
       </div>
-    </div>
+    </div >
   );
 };
 
