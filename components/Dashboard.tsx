@@ -265,12 +265,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, onBack, onReset, onD
   const toggleRedemption = async (leadId: string, currentResponses: any[]) => {
     const isRedeemed = currentResponses.find((r: any) => r.questionId === 'coupon_redeemed' && r.answer === 'true');
 
-    console.log('🔍 Toggle Redemption Started:', {
-      leadId,
-      currentlyRedeemed: !!isRedeemed,
-      currentResponsesCount: currentResponses.length
-    });
-
     // 1. Optimistic Update (Immediate)
     setOptimisticUpdates(prev => ({ ...prev, [leadId]: !isRedeemed }));
 
@@ -282,43 +276,21 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, onBack, onReset, onD
       newResponses = [...currentResponses, { questionId: 'coupon_redeemed', answer: 'true' }];
     }
 
-    console.log('📝 New responses prepared:', {
-      newResponsesCount: newResponses.length,
-      hasCouponRedeemed: newResponses.some((r: any) => r.questionId === 'coupon_redeemed')
-    });
-
     try {
-      // First, let's verify the record exists and get its actual structure
-      const { data: existingRecord, error: fetchError } = await supabase
-        .from('surveys')
-        .select('*')
-        .eq('id', leadId)
-        .single();
-
-      console.log('🔎 Existing record check:', { existingRecord, fetchError });
-
-      if (fetchError || !existingRecord) {
-        throw new Error('Registro não encontrado no banco de dados');
-      }
-
       const { data, error } = await supabase
         .from('surveys')
         .update({ responses: newResponses })
         .eq('id', leadId)
         .select();
 
-      console.log('💾 Supabase update result:', { data, error, leadId });
-
       if (error) throw error;
 
       if (!data || data.length === 0) {
-        throw new Error('Nenhuma linha foi atualizada. Verifique a configuração do Supabase.');
+        throw new Error('Erro ao atualizar. Verifique as permissões do banco de dados.');
       }
 
       // Refresh data from database
       await onDataUpdate();
-
-      console.log('✅ Data refreshed successfully');
 
       if (!isRedeemed) {
         confetti({
@@ -329,7 +301,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, onBack, onReset, onD
         });
       }
     } catch (err) {
-      console.error('❌ Error updating coupon:', err);
+      console.error('Error updating coupon:', err);
       alert('Erro ao atualizar cupom. Tente novamente.');
       // Revert optimistic update on error
       setOptimisticUpdates(prev => {
